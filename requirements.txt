@@ -1,2 +1,2 @@
 colorama
-wcwidth# Your requirements go here
+wcwidth
