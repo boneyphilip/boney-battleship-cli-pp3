@@ -1049,49 +1049,117 @@ class BattleshipGame:
         return f"💦 Enemy fires at {pos} - Torpedo missed, you evaded!"
 
     def _show_status(self, current_turn="Player"):
-        """Show a compact framed status panel below the boards."""
+        """Show a compact 3-section status box with legend below."""
         enemy_left = len(self.enemy_ships)
         player_left = len(self.player_ships)
 
         if current_turn == "Player":
-            turn_value = Fore.CYAN + Style.BRIGHT + "PLAYER TURN" + Style.RESET_ALL
+            turn_value = (
+                Fore.CYAN + Style.BRIGHT + "PLAYER TURN" + Style.RESET_ALL
+            )
         else:
-            turn_value = Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
+            turn_value = (
+                Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
+            )
 
         panel_width = min(STATUS_UI_WIDTH, GAME_UI_WIDTH - 4)
         inner_width = panel_width - 2
-        h = chr(9472)
-        v = chr(9474)
-        tl = chr(9484)
-        tr = chr(9488)
-        bl = chr(9492)
-        br = chr(9496)
+
+        h = "─"
+        v = "│"
+        tl = "┌"
+        tr = "┐"
+        bl = "└"
+        br = "┘"
 
         title = " STATUS "
         spare = max(0, inner_width - len(title))
         left = spare // 2
         right = spare - left
 
-        top = Fore.YELLOW + tl + (h * left) + title + \
-            (h * right) + tr + Style.RESET_ALL
-        bottom = Fore.YELLOW + bl + (h * inner_width) + br + Style.RESET_ALL
+        top = (
+            Fore.YELLOW
+            + tl
+            + (h * left)
+            + title
+            + (h * right)
+            + tr
+            + Style.RESET_ALL
+        )
+        bottom = (
+            Fore.YELLOW
+            + bl
+            + (h * inner_width)
+            + br
+            + Style.RESET_ALL
+        )
 
-        lines = [
-            turn_value,
-            f"Enemy Ships Left: {enemy_left}",
-            f"Your Ships Left:  {player_left}",
-            (
-                "Shots Fired - "
-                f"Player: {self.total_player_shots} | Enemy: {self.total_enemy_shots}"
-            ),
-            f"Legend: {HIT}=Hit  {MISS}=Miss  {WATER}=Water  {SHIP_CHAR}=Your Fleet",
-        ]
+        usable = inner_width - 6
+        col1 = 16
+        col2 = 22
+        col3 = max(12, usable - col1 - col2)
+
+        if col3 < 16:
+            col1 = 14
+            col2 = 18
+            col3 = usable - col1 - col2
+
+        header = (
+            Fore.YELLOW
+            + Style.BRIGHT
+            + pad_visual("TURN STATUS", col1)
+            + Style.RESET_ALL
+            + " │ "
+            + Fore.YELLOW
+            + Style.BRIGHT
+            + pad_visual("FLEET STATUS", col2)
+            + Style.RESET_ALL
+            + " │ "
+            + Fore.YELLOW
+            + Style.BRIGHT
+            + pad_visual("SHOTS FIRED", col3)
+            + Style.RESET_ALL
+        )
+
+        row1 = (
+            pad_visual(turn_value, col1)
+            + " │ "
+            + pad_visual(f"Enemy Ships: {enemy_left}", col2)
+            + " │ "
+            + pad_visual(f"Player: {self.total_player_shots}", col3)
+        )
+
+        row2 = (
+            pad_visual("", col1)
+            + " │ "
+            + pad_visual(f"Your Ships:  {player_left}", col2)
+            + " │ "
+            + pad_visual(f"Enemy:  {self.total_enemy_shots}", col3)
+        )
+
+        legend = (
+            f"Legend: {HIT}=Hit  {MISS}=Miss  "
+            f"{WATER}=Water  {SHIP_CHAR}=Your Fleet"
+        )
+
+        def framed_row(content: str) -> str:
+            return (
+                Fore.YELLOW
+                + v
+                + Style.RESET_ALL
+                + pad_visual(content, inner_width)
+                + Fore.YELLOW
+                + v
+                + Style.RESET_ALL
+            )
 
         print()
         print(center_visual(top, GAME_UI_WIDTH))
-        for line in lines:
-            print(center_visual(Fore.YELLOW + v + Style.RESET_ALL + pad_visual(line,
-                  inner_width) + Fore.YELLOW + v + Style.RESET_ALL, GAME_UI_WIDTH))
+        print(center_visual(framed_row(header), GAME_UI_WIDTH))
+        print(center_visual(framed_row(row1), GAME_UI_WIDTH))
+        print(center_visual(framed_row(row2), GAME_UI_WIDTH))
+        print(center_visual(framed_row(""), GAME_UI_WIDTH))
+        print(center_visual(framed_row(legend), GAME_UI_WIDTH))
         print(center_visual(bottom, GAME_UI_WIDTH))
 
     def _end_screen(self):
