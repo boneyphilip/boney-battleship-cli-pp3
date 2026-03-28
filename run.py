@@ -26,14 +26,66 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 
+def read_keypress() -> str:
+    """Read one key press without waiting for a full input line."""
+    if os.name == "nt":
+        key = msvcrt.getwch()
+
+        if key in ("\x00", "\xe0"):
+            special = msvcrt.getwch()
+            mapping = {
+                "H": "up",
+                "P": "down",
+                "K": "left",
+                "M": "right",
+            }
+            return mapping.get(special, "")
+
+        if key == "\r":
+            return "enter"
+
+        if key == "\x08":
+            return "backspace"
+
+        return key
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        key = sys.stdin.read(1)
+
+        if key == "\x1b":
+            next1 = sys.stdin.read(1)
+            next2 = sys.stdin.read(1)
+            if next1 == "[":
+                mapping = {
+                    "A": "up",
+                    "B": "down",
+                    "D": "left",
+                    "C": "right",
+                }
+                return mapping.get(next2, "")
+            return ""
+
+        if key in ("\r", "\n"):
+            return "enter"
+
+        if key in ("\x7f", "\b"):
+            return "backspace"
+
+        return key
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 # ========= 1) Welcome Screen =========
 class WelcomeScreen:
     """Arcade-style welcome screen with inline setup boxes."""
 
-    def __init__(self, title_lines, ship_art, width=80):
+    def __init__(self, title_lines, width=80):
         # Save the artwork and keep the UI wide enough for the board layout.
         self.title_lines = title_lines
-        self.ship_art = ship_art
         self.width = min(width, GAME_UI_WIDTH)
 
     # ----- Utility Functions -----
@@ -56,6 +108,13 @@ class WelcomeScreen:
         clean_width = self.visible_width(text)
         pad = max(0, (self.width - clean_width) // 2)
         return " " * pad + color + text + Style.RESET_ALL
+
+    def fit_title_line(self, text: str) -> str:
+        """Trim one title line so it never exceeds the terminal width."""
+        fitted = text
+        while self.visible_width(fitted) > self.width and fitted:
+            fitted = fitted[:-1]
+        return fitted
 
     def pad_line(
         self,
@@ -182,42 +241,6 @@ class WelcomeScreen:
         for line in panel_lines:
             print(self.center_text(line))
 
-    def print_side_by_side_panels(
-        self,
-        left_title: str,
-        left_lines: list[str],
-        right_title: str,
-        right_lines: list[str],
-    ):
-        """Print two tighter panels side by side with left-aligned content."""
-        gap = " " * 4
-        panel_width = (self.width - 4) // 2
-
-        left_panel = self.build_panel_lines(
-            left_title,
-            left_lines,
-            panel_width,
-            align="left",
-        )
-        right_panel = self.build_panel_lines(
-            right_title,
-            right_lines,
-            panel_width,
-            align="left",
-        )
-
-        max_lines = max(len(left_panel), len(right_panel))
-
-        # Add blank rows to the shorter panel so both panels end up with the
-        # same height and can be zipped together cleanly.
-        while len(left_panel) < max_lines:
-            left_panel.insert(-1, "│" + (" " * (panel_width - 2)) + "│")
-        while len(right_panel) < max_lines:
-            right_panel.insert(-1, "│" + (" " * (panel_width - 2)) + "│")
-
-        for left_row, right_row in zip(left_panel, right_panel):
-            print(self.center_text(left_row + gap + right_row))
-
     def selector_row(
         self,
         label: str,
@@ -281,96 +304,27 @@ class WelcomeScreen:
 
     def read_key(self) -> str:
         """Read one key without showing an extra input prompt."""
-        if os.name == "nt":
-            # Windows arrow keys come as two characters, so we translate them
-            # into simple names like "up" and "left".
-            key = msvcrt.getwch()
-
-            if key in ("\x00", "\xe0"):
-                special = msvcrt.getwch()
-                mapping = {
-                    "H": "up",
-                    "P": "down",
-                    "K": "left",
-                    "M": "right",
-                }
-                return mapping.get(special, "")
-
-            if key == "\r":
-                return "enter"
-
-            if key == "\x08":
-                return "backspace"
-
-            return key.lower()
-
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            # On Unix systems we switch to raw mode so one key press can be
-            # read immediately without waiting for Enter.
-            tty.setraw(fd)
-            key = sys.stdin.read(1)
-
-            if key == "\x1b":
-                # Arrow keys arrive as escape sequences on Unix terminals, so
-                # we read the next characters to figure out which arrow it was.
-                next1 = sys.stdin.read(1)
-                next2 = sys.stdin.read(1)
-                if next1 == "[":
-                    mapping = {
-                        "A": "up",
-                        "B": "down",
-                        "D": "left",
-                        "C": "right",
-                    }
-                    return mapping.get(next2, "")
-                return ""
-
-            if key in ("\r", "\n"):
-                return "enter"
-
-            if key in ("\x7f", "\b"):
-                return "backspace"
-
-            return key.lower()
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return read_keypress().lower()
 
     # ----- Title -----
     def show_title(self):
-        """Show the compact premium title section."""
+        """Show a compact deployment-safe title section."""
         clear_screen()
-        print("\n")
 
         for line in self.title_lines:
-            print(self.center_text(self.gradient_line(line)))
+            print(
+                self.center_text(
+                    self.gradient_line(self.fit_title_line(line))
+                )
+            )
 
-        print()
-
-        tagline = (
-            "⚓ Command Center Online ⚓"
-            if self.width < 74
-            else "⚓  Command Center Online - Prepare for Battle  ⚓"
+        subtitle = (
+            Fore.CYAN
+            + Style.BRIGHT
+            + "Command Center Online"
+            + Style.RESET_ALL
         )
-        line = Fore.YELLOW + (chr(9552) * self.width) + Style.RESET_ALL
-        print(self.center_text(line))
-        print(self.center_text(tagline, color=Style.BRIGHT + Fore.CYAN))
-        print(self.center_text(line))
-        print()
-
-    def show_ship(self):
-        """Show original ship art inside a bigger box."""
-        art_lines = ["", ""]
-        for line in self.ship_art.splitlines():
-            # Ignore empty lines from the multiline string so the artwork
-            # stays tidy inside the panel.
-            if line.strip():
-                art_lines.append(Fore.GREEN + line + Style.RESET_ALL)
-        art_lines.extend(["", ""])
-
-        self.print_panel("FLEET VISUAL", art_lines, align="center")
-        print()
+        print(self.center_text(subtitle))
 
     # ----- Input Screen -----
     def render_setup_screen(
@@ -382,17 +336,14 @@ class WelcomeScreen:
     ):
         """Render the compact deployment-friendly setup screen."""
         self.show_title()
-        self.show_ship()
 
         menu_indent = " " * max(2, (self.width - 56) // 2)
 
         setup_lines = [
-            "",
             menu_indent
             + Fore.WHITE
-            + "Choose your battlefield settings before deployment."
+            + "Choose settings, then press Enter."
             + Style.RESET_ALL,
-            "",
             self.selector_row(
                 "GRID SIZE",
                 8,
@@ -412,22 +363,18 @@ class WelcomeScreen:
             "",
             menu_indent
             + Fore.GREEN
-            + "Use arrows or numbers. Press Enter to confirm."
+            + "Use arrows or numbers. Press Enter."
             + Style.RESET_ALL,
-            "",
         ]
 
         self.print_panel("MISSION SETUP", setup_lines, align="left")
 
         if message:
-            print()
             print(
                 self.center_text(
                     Fore.RED + Style.BRIGHT + message + Style.RESET_ALL
                 )
             )
-
-        print()
 
     def get_inputs(self):
         """Inline box editing inside mission setup."""
@@ -542,60 +489,40 @@ class WelcomeScreen:
 
     # ----- Mission Briefing -----
     def mission_briefing(self, size, ships):
-        """Show a shorter compact mission briefing."""
+        """Show a compact deployment-safe mission briefing."""
         max_row = chr(64 + size)
 
         briefing_lines = [
-            "",
+            Fore.CYAN + Style.BRIGHT + "Welcome, Commander." + Style.RESET_ALL,
+            f"Grid: {size}x{size} sectors (A-{max_row}, 1-{size})",
+            f"Fleet: {ships} battleships deployed",
+            f"Controls: Enter A1 to {max_row}{size}, or Q",
             (
-                "  "
-                + Fore.CYAN
-                + Style.BRIGHT
-                + "Welcome, Commander."
-                + Style.RESET_ALL
+                f"Marks: {HIT} hit  {MISS} miss  "
+                f"{WATER} water  {SHIP_CHAR} fleet"
             ),
-            f"  Tactical grid: {size}x{size} sectors (A-{max_row}, 1-{size})",
-            f"  Fleet deployed: {ships} battleships",
-            "  Controls: Enter strike coordinates like A1 or H8.",
-            (
-                f"  Marks: {HIT}=Hit  {MISS}=Miss  "
-                f"{WATER}=Water  {SHIP_CHAR}=Your Fleet"
-            ),
-            "  Rules: One strike per turn. Destroy the enemy fleet.",
-            "",
+            "Objective: destroy the enemy fleet",
         ]
 
-        clear_screen()
         self.show_title()
 
         self.print_custom_panel(
             "MISSION BRIEFING",
             briefing_lines,
-            panel_width=min(76, self.width - 4),
+            panel_width=min(72, self.width - 4),
             align="left",
         )
 
-        print()
-
-        deploy_lines = [
-            "Fleet standing by.",
-            "",
-            (
+        print(
+            self.center_text(
                 Fore.GREEN
                 + Style.BRIGHT
-                + "Press Enter to deploy your fleet..."
+                + "Press Enter to deploy..."
                 + Style.RESET_ALL
-            ),
-        ]
-        self.print_custom_panel(
-            "DEPLOYMENT",
-            deploy_lines,
-            panel_width=min(68, self.width - 4),
-            align="center",
+            )
         )
 
         input()
-        clear_screen()
 
 
 # ========= 2) Battleship Game =========
@@ -620,8 +547,8 @@ def get_terminal_width() -> int:
 GAME_UI_WIDTH = get_terminal_width()
 STATUS_UI_WIDTH = max(56, GAME_UI_WIDTH - 8)
 
-# Use a slightly tighter cell width on very small terminals.
-CELL_VISUAL = 2 if GAME_UI_WIDTH < 74 else 3
+# Use a readable cell width while keeping two 10x10 boards side by side.
+CELL_VISUAL = 3
 GAP_BETWEEN_BOARDS = " " * 2
 
 
@@ -629,6 +556,12 @@ def clear_screen():
     """Clear terminal window (Windows & Unix)."""
     # Windows uses `cls`, while Linux/macOS terminals usually use `clear`.
     os.system("cls" if os.name == "nt" else "clear")
+
+
+def redraw_screen():
+    """Redraw the terminal in place without spawning a shell clear command."""
+    sys.stdout.write("\033[H\033[J")
+    sys.stdout.flush()
 
 
 def strip_ansi(s: str) -> str:
@@ -669,7 +602,6 @@ def build_board_block(
     # row letters like a classic Battleship display.
     size = len(grid_rows)
     inner_width = 3 + (size * CELL_VISUAL)
-    inner_width = min(inner_width, GAME_UI_WIDTH - 6)
     lines = []
 
     label = f" {title_text} "
@@ -701,10 +633,10 @@ def display_boards(enemy_view: list[list[str]], player_board: list[list[str]]):
     player_block = build_board_block(RIGHT_TITLE, player_board)
 
     board_width = max(wcswidth(strip_ansi(row)) for row in enemy_block)
-    gap = " " * 4
+    gap = GAP_BETWEEN_BOARDS
     combined_width = (board_width * 2) + len(gap)
 
-    if combined_width <= GAME_UI_WIDTH:
+    if combined_width <= (GAME_UI_WIDTH - 2):
         for enemy_row, player_row in zip(enemy_block, player_block):
             print(center_visual(enemy_row + gap + player_row, GAME_UI_WIDTH))
         return
@@ -741,6 +673,7 @@ class BattleshipGame:
         self.battle_message = ""
         self.last_player_target = ""
         self.title_lines = title_lines or []
+        self.frame_started = False
         # Developer mode keeps test-only commands available during build work.
         self.dev_mode = False
 
@@ -763,59 +696,80 @@ class BattleshipGame:
 
     def _print_ascii_banner(self):
         """Print gameplay title centered to the gameplay canvas."""
-        # Reuse the same title art from the welcome screen during gameplay.
         for line in self.title_lines:
             print(center_visual(line, GAME_UI_WIDTH))
-        print()
 
     def _show_target_console(self, prompt: bool = False):
-        """Render the battle message area above the target input console."""
-        # This console is reused both for asking the player for input and for
-        # simply showing temporary messages between turns.
-        command_rule = Fore.YELLOW + "─" * STATUS_UI_WIDTH + Style.RESET_ALL
-        command_title = (
-            Fore.YELLOW + Style.BRIGHT + "TARGET INPUT" + Style.RESET_ALL
-        )
-        # Keep the visible prompt simple even when hidden developer commands
-        # are enabled in the background.
-        prompt_text = (
-            Fore.YELLOW
-            + "Enter position (e.g., A1) or Q to quit: "
+        """Render a fixed-height battle message and target input area."""
+        message_line = self.battle_message if self.battle_message else " "
+        prompt_label = "Enter target (example: A1). Type Q to quit: "
+        rule = Fore.YELLOW + ("─" * STATUS_UI_WIDTH) + Style.RESET_ALL
+        prompt_indent = max(0, (GAME_UI_WIDTH - wcswidth(prompt_label)) // 2)
+
+        print(center_visual(message_line, GAME_UI_WIDTH))
+        print(center_visual(rule, GAME_UI_WIDTH))
+
+        if not prompt:
+            print(
+                (" " * prompt_indent)
+                + Fore.YELLOW
+                + prompt_label
+                + Style.RESET_ALL
+            )
+            print(center_visual(rule, GAME_UI_WIDTH))
+            return None
+
+        # Draw an empty prompt row first so the layout height stays stable.
+        print(" " * GAME_UI_WIDTH)
+        print(center_visual(rule, GAME_UI_WIDTH))
+
+        # Move cursor back up to the prompt row.
+        sys.stdout.write("\033[2A\r")
+        sys.stdout.write(
+            (" " * prompt_indent)
+            + Fore.YELLOW
+            + prompt_label
             + Style.RESET_ALL
         )
+        sys.stdout.flush()
 
-        print()
+        typed = ""
 
-        # Battle message goes in the empty area ABOVE the target input strip
-        if self.battle_message:
-            print(center_visual(self.battle_message, GAME_UI_WIDTH))
-        else:
-            print(center_visual(" ", GAME_UI_WIDTH))
+        while True:
+            key = read_keypress()
 
-        # One spacer line so the message breathes a bit
-        print(center_visual(" ", GAME_UI_WIDTH))
+            if key == "enter":
+                # Move cursor below the lower divider before returning.
+                sys.stdout.write("\033[2B\r")
+                sys.stdout.flush()
+                return typed.strip().upper()
 
-        # Target input strip starts below
-        print(center_visual(command_rule, GAME_UI_WIDTH))
-        print(center_visual(command_title, GAME_UI_WIDTH))
+            if key == "backspace":
+                if typed:
+                    typed = typed[:-1]
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+                continue
 
-        if prompt:
-            return (
-                input(center_visual(prompt_text, GAME_UI_WIDTH))
-                .strip()
-                .upper()
-            )
-
-        print(center_visual(" ", GAME_UI_WIDTH))
-        return None
+            if len(key) == 1 and key.isprintable():
+                # Prevent the typed value from growing too long and
+                # breaking the gameplay layout.
+                if len(typed) < 10:
+                    ch = key.upper()
+                    typed += ch
+                    sys.stdout.write(ch)
+                    sys.stdout.flush()
 
     def _render_game_frame(
         self, current_turn="Player", prompt: bool = False
     ):
         """Draw the complete gameplay frame."""
-        # A full frame redraw keeps the terminal UI simple: clear everything
-        # and print the current game state from scratch.
-        clear_screen()
+        # The first draw uses a full clear, later draws repaint in place.
+        if self.frame_started:
+            redraw_screen()
+        else:
+            clear_screen()
+            self.frame_started = True
         self._print_ascii_banner()
         display_boards(self.enemy_view, self.player_board)
         self._show_status(current_turn=current_turn)
@@ -839,7 +793,7 @@ class BattleshipGame:
         warning_text = Fore.RED + Style.BRIGHT + message + Style.RESET_ALL
         self.battle_message = warning_text
         self._render_game_frame(current_turn=current_turn, prompt=False)
-        time.sleep(0.60)
+        time.sleep(0.50)
         self.battle_message = ""
 
     def play(self):
@@ -902,7 +856,7 @@ class BattleshipGame:
             self._show_battle_message(
                 Fore.CYAN + self.player_msg + Style.RESET_ALL,
                 current_turn="Player",
-                delay=0.85,
+                delay=0.80,
             )
 
             if not self.enemy_ships:
@@ -919,7 +873,7 @@ class BattleshipGame:
             self._show_battle_message(
                 Fore.MAGENTA + self.enemy_msg + Style.RESET_ALL,
                 current_turn="Enemy",
-                delay=0.85,
+                delay=0.80,
             )
 
         self._end_screen()
@@ -1047,7 +1001,7 @@ class BattleshipGame:
         return f"💦 Enemy fires at {pos} - Torpedo missed, you evaded!"
 
     def _show_status(self, current_turn="Player"):
-        """Show a balanced centered status panel."""
+        """Show a clean centered status panel with three sections."""
         enemy_left = len(self.enemy_ships)
         player_left = len(self.player_ships)
 
@@ -1060,47 +1014,10 @@ class BattleshipGame:
                 Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
             )
 
-        panel_width = min(STATUS_UI_WIDTH + 4, GAME_UI_WIDTH - 4)
+        panel_width = min(72, GAME_UI_WIDTH - 2)
         inner_width = panel_width - 2
-
-        h = "─"
-        v = "│"
-        tl = "┌"
-        tr = "┐"
-        bl = "└"
-        br = "┘"
-
-        title = " STATUS "
-        spare = max(0, inner_width - len(title))
-        left = spare // 2
-        right = spare - left
-
-        top = (
-            Fore.YELLOW
-            + tl
-            + (h * left)
-            + title
-            + (h * right)
-            + tr
-            + Style.RESET_ALL
-        )
-        bottom = (
-            Fore.YELLOW
-            + bl
-            + (h * inner_width)
-            + br
-            + Style.RESET_ALL
-        )
-
         side_pad = 2
         content_width = inner_width - (side_pad * 2)
-
-        sep = " │ "
-
-        # Keep the 3-column block compact, then center it inside the box
-        col1 = 16
-        col2 = 18
-        col3 = 16
 
         def fit_cell(text: str, width: int, align: str = "left") -> str:
             visible = wcswidth(strip_ansi(text))
@@ -1115,100 +1032,90 @@ class BattleshipGame:
                 right_pad = width - visible - left_pad
                 return (" " * left_pad) + text + (" " * right_pad)
 
-            if align == "right":
-                return (" " * (width - visible)) + text
-
             return text + (" " * (width - visible))
 
-        def center_block(text: str, width: int) -> str:
-            visible = wcswidth(strip_ansi(text))
-            if visible < 0:
-                visible = len(strip_ansi(text))
+        title = " STATUS "
+        spare = max(0, inner_width - len(title))
+        left = spare // 2
+        right = spare - left
 
-            if visible >= width:
-                return text
+        top = (
+            Fore.YELLOW
+            + "┌"
+            + ("─" * left)
+            + title
+            + ("─" * right)
+            + "┐"
+            + Style.RESET_ALL
+        )
+        bottom = (
+            Fore.YELLOW
+            + "└"
+            + ("─" * inner_width)
+            + "┘"
+            + Style.RESET_ALL
+        )
 
-            left_pad = (width - visible) // 2
-            right_pad = width - visible - left_pad
-            return (" " * left_pad) + text + (" " * right_pad)
-
-        header_line = (
-            fit_cell(
-                Fore.YELLOW + Style.BRIGHT + "TURN STATUS" + Style.RESET_ALL,
-                col1,
-                "center",
+        def row(text: str) -> str:
+            return (
+                Fore.YELLOW
+                + "│"
+                + Style.RESET_ALL
+                + (" " * side_pad)
+                + fit_cell(text, content_width)
+                + (" " * side_pad)
+                + Fore.YELLOW
+                + "│"
+                + Style.RESET_ALL
             )
+
+        sep = " │ "
+        col1 = 18
+        col2 = 18
+        col3 = content_width - (len(sep) * 2) - col1 - col2
+
+        header = (
+            fit_cell("TURN STATUS", col1, "center")
             + sep
-            + fit_cell(
-                Fore.YELLOW + Style.BRIGHT + "FLEET STATUS" + Style.RESET_ALL,
-                col2,
-                "center",
-            )
+            + fit_cell("FLEET STATUS", col2, "center")
             + sep
-            + fit_cell(
-                Fore.YELLOW + Style.BRIGHT + "SHOTS FIRED" + Style.RESET_ALL,
-                col3,
-                "center",
-            )
+            + fit_cell("SHOTS FIRED", col3, "center")
         )
 
         row1 = (
             fit_cell(turn_value, col1, "center")
             + sep
-            + fit_cell(f"Enemy Ships: {enemy_left}", col2, "left")
+            + fit_cell(f"Enemy Ships: {enemy_left}", col2)
             + sep
-            + fit_cell(f"Player: {self.total_player_shots}", col3, "left")
+            + fit_cell(f"Player: {self.total_player_shots}", col3)
         )
 
         row2 = (
             fit_cell("", col1, "center")
             + sep
-            + fit_cell(f"Your Ships:  {player_left}", col2, "left")
+            + fit_cell(f"Your Ships:  {player_left}", col2)
             + sep
-            + fit_cell(f"Enemy:  {self.total_enemy_shots}", col3, "left")
+            + fit_cell(f"Enemy: {self.total_enemy_shots}", col3)
         )
 
         legend = (
-            f"Legend: {HIT}=Hit   {MISS}=Miss   "
-            f"{WATER}=Water   {SHIP_CHAR}=Your Fleet"
+            f"Legend: {HIT} hit  {MISS} miss  "
+            f"{WATER} water  {SHIP_CHAR} fleet"
         )
 
-        def framed_row(content: str = "", center_content: bool = False) -> str:
-            if center_content:
-                content = center_block(content, content_width)
-            else:
-                content = fit_cell(content, content_width, "left")
-
-            return (
-                Fore.YELLOW
-                + v
-                + Style.RESET_ALL
-                + (" " * side_pad)
-                + content
-                + (" " * side_pad)
-                + Fore.YELLOW
-                + v
-                + Style.RESET_ALL
-            )
-
-        print()
         print(center_visual(top, GAME_UI_WIDTH))
-        print(center_visual(framed_row(""), GAME_UI_WIDTH))
         print(
             center_visual(
-                framed_row(header_line, center_content=True), GAME_UI_WIDTH
+                row(Fore.YELLOW + Style.BRIGHT + header + Style.RESET_ALL),
+                GAME_UI_WIDTH,
             )
         )
-        print(
-            center_visual(framed_row(row1, center_content=True), GAME_UI_WIDTH)
-        )
-        print(
-            center_visual(framed_row(row2, center_content=True), GAME_UI_WIDTH)
-        )
-        print(center_visual(framed_row(""), GAME_UI_WIDTH))
+        print(center_visual(row(row1), GAME_UI_WIDTH))
+        print(center_visual(row(row2), GAME_UI_WIDTH))
         print(
             center_visual(
-                framed_row(legend, center_content=True), GAME_UI_WIDTH
+                row(fit_cell(legend, content_width, "center")),
+                GAME_UI_WIDTH,
             )
         )
         print(center_visual(bottom, GAME_UI_WIDTH))
@@ -1221,12 +1128,9 @@ class BattleshipGame:
         # Choose the final message based on which side still has ships.
         if self.enemy_ships and not self.player_ships:
             lines = [
-                "",
                 Fore.RED + Style.BRIGHT + "MISSION FAILED" + Style.RESET_ALL,
-                "",
                 "Your fleet has been destroyed.",
                 "The enemy controls these waters.",
-                "",
                 (
                     Fore.YELLOW
                     + (
@@ -1236,19 +1140,15 @@ class BattleshipGame:
                     )
                     + Style.RESET_ALL
                 ),
-                "",
             ]
         else:
             lines = [
-                "",
                 Fore.GREEN
                 + Style.BRIGHT
                 + "MISSION ACCOMPLISHED"
                 + Style.RESET_ALL,
-                "",
                 "All enemy ships have been destroyed.",
                 "The battlefield is yours, Commander.",
-                "",
                 (
                     Fore.YELLOW
                     + (
@@ -1258,7 +1158,6 @@ class BattleshipGame:
                     )
                     + Style.RESET_ALL
                 ),
-                "",
             ]
 
         panel_width = min(76, GAME_UI_WIDTH - 4)
@@ -1271,7 +1170,6 @@ class BattleshipGame:
         top = "┌" + ("─" * left) + label + ("─" * right) + "┐"
         bottom = "└" + ("─" * inner_width) + "┘"
 
-        print()
         print(center_visual(top, GAME_UI_WIDTH))
 
         # Leave a little space inside the panel so the text does not touch
@@ -1283,7 +1181,6 @@ class BattleshipGame:
             print(center_visual(row, GAME_UI_WIDTH))
 
         print(center_visual(bottom, GAME_UI_WIDTH))
-        print()
 
 
 # ========= 3) Run Game =========
@@ -1293,55 +1190,33 @@ if __name__ == "__main__":
         (
             "█████▄ ▄████▄ ██████ "
             "██████ ██     "
-            "██████ ▄█████ ██  ██ "
-            "██ █████▄ ▄█████ "
+            "██████ ▄█████ "
+            "██  ██ ██ █████▄ ▄█████"
         ),
         (
             "██▄▄██ ██▄▄██   ██     "
             "██   ██     "
-            "██▄▄   ▀▀▀▄▄▄ ██████ "
-            "██ ██▄▄█▀ ▀▀▀▄▄▄ "
+            "██▄▄   ▀▀▀▄▄▄ "
+            "██████ ██ ██▄▄█▀ ▀▀▀▄▄▄"
         ),
         (
             "██▄▄█▀ ██  ██   ██     "
             "██   ██████ "
-            "██▄▄▄▄ █████▀ ██  ██ "
-            "██ ██     █████▀ "
+            "██▄▄▄▄ █████▀ "
+            "██  ██ ██ ██     █████▀"
         ),
     ]
+
+    if GAME_UI_WIDTH < 76:
+        welcome_title_lines = ["<< BATTLESHIPS >>"]
 
     gameplay_title_lines = [
-        (
-            "█████▄ ▄████▄ ██████ "
-            "██████ ██     "
-            "██████ ▄█████ ██  ██ "
-            "██ █████▄ ▄█████ "
-        ),
-        (
-            "██▄▄██ ██▄▄██   ██     "
-            "██   ██     "
-            "██▄▄   ▀▀▀▄▄▄ ██████ "
-            "██ ██▄▄█▀ ▀▀▀▄▄▄ "
-        ),
-        (
-            "██▄▄█▀ ██  ██   ██     "
-            "██   ██████ "
-            "██▄▄▄▄ █████▀ ██  ██ "
-            "██ ██     █████▀ "
-        ),
+        Fore.CYAN + Style.BRIGHT + "<< BATTLESHIPS >>" + Style.RESET_ALL,
     ]
-
-    ship_art = r"""
-         ⠀⠠⡇⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⡀⢰⣷⣶⣶⡄⢠⣤⠀⠀⠀⠀⠀
-⠠⠤⠦⠤⠤⠦⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠋⠀
-"""
 
     # Run the setup screens first so the player can choose the board size
     # and number of ships before the actual battle starts.
-    ws = WelcomeScreen(welcome_title_lines, ship_art, width=GAME_UI_WIDTH)
-    ws.show_title()
-    ws.show_ship()
+    ws = WelcomeScreen(welcome_title_lines, width=GAME_UI_WIDTH)
     size, ships = ws.get_inputs()
     ws.mission_briefing(size, ships)
 
