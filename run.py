@@ -547,11 +547,20 @@ class WelcomeScreen:
 
         briefing_lines = [
             "",
-            "  " + Fore.CYAN + Style.BRIGHT + "Welcome, Commander." + Style.RESET_ALL,
+            (
+                "  "
+                + Fore.CYAN
+                + Style.BRIGHT
+                + "Welcome, Commander."
+                + Style.RESET_ALL
+            ),
             f"  Tactical grid: {size}x{size} sectors (A-{max_row}, 1-{size})",
             f"  Fleet deployed: {ships} battleships",
             "  Controls: Enter strike coordinates like A1 or H8.",
-            f"  Marks: {HIT}=Hit  {MISS}=Miss  {WATER}=Water  {SHIP_CHAR}=Your Fleet",
+            (
+                f"  Marks: {HIT}=Hit  {MISS}=Miss  "
+                f"{WATER}=Water  {SHIP_CHAR}=Your Fleet"
+            ),
             "  Rules: One strike per turn. Destroy the enemy fleet.",
             "",
         ]
@@ -571,7 +580,12 @@ class WelcomeScreen:
         deploy_lines = [
             "Fleet standing by.",
             "",
-            Fore.GREEN + Style.BRIGHT + "Press Enter to deploy your fleet..." + Style.RESET_ALL,
+            (
+                Fore.GREEN
+                + Style.BRIGHT
+                + "Press Enter to deploy your fleet..."
+                + Style.RESET_ALL
+            ),
         ]
         self.print_custom_panel(
             "DEPLOYMENT",
@@ -942,13 +956,17 @@ class BattleshipGame:
             if guess == "/WIN":
                 # Removing all enemy ships triggers the win ending.
                 self.enemy_ships.clear()
-                self.player_msg = "🛠 Developer cheat activated: instant win."
+                self.player_msg = (
+                    "🛠 Developer cheat activated: instant win."
+                )
                 return "cheat_win"
 
             if guess == "/LOSE":
                 # Removing all player ships triggers the loss ending.
                 self.player_ships.clear()
-                self.player_msg = "🛠 Developer cheat activated: instant lose."
+                self.player_msg = (
+                    "🛠 Developer cheat activated: instant lose."
+                )
                 return "cheat_lose"
 
             if guess == "/PHIT":
@@ -1049,7 +1067,7 @@ class BattleshipGame:
         return f"💦 Enemy fires at {pos} - Torpedo missed, you evaded!"
 
     def _show_status(self, current_turn="Player"):
-        """Show a compact 3-section status box with legend below."""
+        """Show a balanced centered status panel."""
         enemy_left = len(self.enemy_ships)
         player_left = len(self.player_ships)
 
@@ -1062,7 +1080,7 @@ class BattleshipGame:
                 Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
             )
 
-        panel_width = min(STATUS_UI_WIDTH, GAME_UI_WIDTH - 4)
+        panel_width = min(STATUS_UI_WIDTH + 4, GAME_UI_WIDTH - 4)
         inner_width = panel_width - 2
 
         h = "─"
@@ -1094,60 +1112,100 @@ class BattleshipGame:
             + Style.RESET_ALL
         )
 
-        usable = inner_width - 6
+        side_pad = 2
+        content_width = inner_width - (side_pad * 2)
+
+        sep = " │ "
+
+        # Keep the 3-column block compact, then center it inside the box
         col1 = 16
-        col2 = 22
-        col3 = max(12, usable - col1 - col2)
+        col2 = 18
+        col3 = 16
 
-        if col3 < 16:
-            col1 = 14
-            col2 = 18
-            col3 = usable - col1 - col2
+        def fit_cell(text: str, width: int, align: str = "left") -> str:
+            visible = wcswidth(strip_ansi(text))
+            if visible < 0:
+                visible = len(strip_ansi(text))
 
-        header = (
-            Fore.YELLOW
-            + Style.BRIGHT
-            + pad_visual("TURN STATUS", col1)
-            + Style.RESET_ALL
-            + " │ "
-            + Fore.YELLOW
-            + Style.BRIGHT
-            + pad_visual("FLEET STATUS", col2)
-            + Style.RESET_ALL
-            + " │ "
-            + Fore.YELLOW
-            + Style.BRIGHT
-            + pad_visual("SHOTS FIRED", col3)
-            + Style.RESET_ALL
+            if visible >= width:
+                return text
+
+            if align == "center":
+                left_pad = (width - visible) // 2
+                right_pad = width - visible - left_pad
+                return (" " * left_pad) + text + (" " * right_pad)
+
+            if align == "right":
+                return (" " * (width - visible)) + text
+
+            return text + (" " * (width - visible))
+
+        def center_block(text: str, width: int) -> str:
+            visible = wcswidth(strip_ansi(text))
+            if visible < 0:
+                visible = len(strip_ansi(text))
+
+            if visible >= width:
+                return text
+
+            left_pad = (width - visible) // 2
+            right_pad = width - visible - left_pad
+            return (" " * left_pad) + text + (" " * right_pad)
+
+        header_line = (
+            fit_cell(
+                Fore.YELLOW + Style.BRIGHT + "TURN STATUS" + Style.RESET_ALL,
+                col1,
+                "center",
+            )
+            + sep
+            + fit_cell(
+                Fore.YELLOW + Style.BRIGHT + "FLEET STATUS" + Style.RESET_ALL,
+                col2,
+                "center",
+            )
+            + sep
+            + fit_cell(
+                Fore.YELLOW + Style.BRIGHT + "SHOTS FIRED" + Style.RESET_ALL,
+                col3,
+                "center",
+            )
         )
 
         row1 = (
-            pad_visual(turn_value, col1)
-            + " │ "
-            + pad_visual(f"Enemy Ships: {enemy_left}", col2)
-            + " │ "
-            + pad_visual(f"Player: {self.total_player_shots}", col3)
+            fit_cell(turn_value, col1, "center")
+            + sep
+            + fit_cell(f"Enemy Ships: {enemy_left}", col2, "left")
+            + sep
+            + fit_cell(f"Player: {self.total_player_shots}", col3, "left")
         )
 
         row2 = (
-            pad_visual("", col1)
-            + " │ "
-            + pad_visual(f"Your Ships:  {player_left}", col2)
-            + " │ "
-            + pad_visual(f"Enemy:  {self.total_enemy_shots}", col3)
+            fit_cell("", col1, "center")
+            + sep
+            + fit_cell(f"Your Ships:  {player_left}", col2, "left")
+            + sep
+            + fit_cell(f"Enemy:  {self.total_enemy_shots}", col3, "left")
         )
 
         legend = (
-            f"Legend: {HIT}=Hit  {MISS}=Miss  "
-            f"{WATER}=Water  {SHIP_CHAR}=Your Fleet"
+            f"Legend: {HIT}=Hit   {MISS}=Miss   "
+            f"{WATER}=Water   {SHIP_CHAR}=Your Fleet"
         )
 
-        def framed_row(content: str) -> str:
+        def framed_row(content: str = "", center_content: bool = False) -> str:
+            if center_content:
+                content = center_block(content, content_width)
+            else:
+                content = fit_cell(content, content_width, "left")
+
             return (
                 Fore.YELLOW
                 + v
                 + Style.RESET_ALL
-                + pad_visual(content, inner_width)
+                + (" " * side_pad)
+                + content
+                + (" " * side_pad)
                 + Fore.YELLOW
                 + v
                 + Style.RESET_ALL
@@ -1155,11 +1213,24 @@ class BattleshipGame:
 
         print()
         print(center_visual(top, GAME_UI_WIDTH))
-        print(center_visual(framed_row(header), GAME_UI_WIDTH))
-        print(center_visual(framed_row(row1), GAME_UI_WIDTH))
-        print(center_visual(framed_row(row2), GAME_UI_WIDTH))
         print(center_visual(framed_row(""), GAME_UI_WIDTH))
-        print(center_visual(framed_row(legend), GAME_UI_WIDTH))
+        print(
+            center_visual(
+                framed_row(header_line, center_content=True), GAME_UI_WIDTH
+            )
+        )
+        print(
+            center_visual(framed_row(row1, center_content=True), GAME_UI_WIDTH)
+        )
+        print(
+            center_visual(framed_row(row2, center_content=True), GAME_UI_WIDTH)
+        )
+        print(center_visual(framed_row(""), GAME_UI_WIDTH))
+        print(
+            center_visual(
+                framed_row(legend, center_content=True), GAME_UI_WIDTH
+            )
+        )
         print(center_visual(bottom, GAME_UI_WIDTH))
 
     def _end_screen(self):
@@ -1239,15 +1310,45 @@ class BattleshipGame:
 if __name__ == "__main__":
     # Compact deployment assets sized for the Code Institute 80x24 terminal.
     welcome_title_lines = [
-        "█████▄ ▄████▄ ██████ ██████ ██     ██████ ▄█████ ██  ██ ██ █████▄ ▄█████ ",
-        "██▄▄██ ██▄▄██   ██     ██   ██     ██▄▄   ▀▀▀▄▄▄ ██████ ██ ██▄▄█▀ ▀▀▀▄▄▄ ",
-        "██▄▄█▀ ██  ██   ██     ██   ██████ ██▄▄▄▄ █████▀ ██  ██ ██ ██     █████▀ ",
+        (
+            "█████▄ ▄████▄ ██████ "
+            "██████ ██     "
+            "██████ ▄█████ ██  ██ "
+            "██ █████▄ ▄█████ "
+        ),
+        (
+            "██▄▄██ ██▄▄██   ██     "
+            "██   ██     "
+            "██▄▄   ▀▀▀▄▄▄ ██████ "
+            "██ ██▄▄█▀ ▀▀▀▄▄▄ "
+        ),
+        (
+            "██▄▄█▀ ██  ██   ██     "
+            "██   ██████ "
+            "██▄▄▄▄ █████▀ ██  ██ "
+            "██ ██     █████▀ "
+        ),
     ]
 
     gameplay_title_lines = [
-        "█████▄ ▄████▄ ██████ ██████ ██     ██████ ▄█████ ██  ██ ██ █████▄ ▄█████ ",
-        "██▄▄██ ██▄▄██   ██     ██   ██     ██▄▄   ▀▀▀▄▄▄ ██████ ██ ██▄▄█▀ ▀▀▀▄▄▄ ",
-        "██▄▄█▀ ██  ██   ██     ██   ██████ ██▄▄▄▄ █████▀ ██  ██ ██ ██     █████▀ ",
+        (
+            "█████▄ ▄████▄ ██████ "
+            "██████ ██     "
+            "██████ ▄█████ ██  ██ "
+            "██ █████▄ ▄█████ "
+        ),
+        (
+            "██▄▄██ ██▄▄██   ██     "
+            "██   ██     "
+            "██▄▄   ▀▀▀▄▄▄ ██████ "
+            "██ ██▄▄█▀ ▀▀▀▄▄▄ "
+        ),
+        (
+            "██▄▄█▀ ██  ██   ██     "
+            "██   ██████ "
+            "██▄▄▄▄ █████▀ ██  ██ "
+            "██ ██     █████▀ "
+        ),
     ]
 
     ship_art = r"""
