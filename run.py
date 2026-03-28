@@ -6,6 +6,7 @@ import re
 import sys
 import random
 import time
+import shutil
 from colorama import init, Fore, Style
 from wcwidth import wcswidth
 
@@ -19,16 +20,21 @@ else:
 # `autoreset=True` means each print resets the color automatically.
 init(autoreset=True)
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 
 # ========= 1) Welcome Screen =========
 class WelcomeScreen:
     """Arcade-style welcome screen with inline setup boxes."""
 
-    def __init__(self, title_lines, ship_art, width=100):
+    def __init__(self, title_lines, ship_art, width=80):
         # Save the artwork and keep the UI wide enough for the board layout.
         self.title_lines = title_lines
         self.ship_art = ship_art
-        self.width = max(width, 118)
+        self.width = min(width, GAME_UI_WIDTH)
 
     # ----- Utility Functions -----
     def strip_ansi(self, text: str) -> str:
@@ -226,7 +232,7 @@ class WelcomeScreen:
 
         # Each setup row uses the same fixed indent so the menu feels like
         # one clean column inside the outer mission panel.
-        menu_indent = 12
+        menu_indent = max(2, (self.width - 56) // 2)
         marker = "▶" if selected else " "
         label_part = f"{label} ({min_value}-{max_value})".ljust(22)
         value_box = f"[  {display_value:^3}  ]"
@@ -333,24 +339,26 @@ class WelcomeScreen:
 
     # ----- Title -----
     def show_title(self):
-        """Show original colorful title and top console strip."""
-        # Start with a clean screen so the title always appears at the top.
+        """Show the compact premium title section."""
         clear_screen()
         print("\n")
 
         for line in self.title_lines:
             print(self.center_text(self.gradient_line(line)))
 
-        print("\n")
+        print()
 
-        tagline = "⚓  Command Center Online - Prepare for Battle  ⚓"
-        line = Fore.YELLOW + "═" * self.width + Style.RESET_ALL
+        tagline = (
+            "⚓ Command Center Online ⚓"
+            if self.width < 74
+            else "⚓  Command Center Online - Prepare for Battle  ⚓"
+        )
+        line = Fore.YELLOW + (chr(9552) * self.width) + Style.RESET_ALL
         print(self.center_text(line))
         print(self.center_text(tagline, color=Style.BRIGHT + Fore.CYAN))
         print(self.center_text(line))
         print()
 
-    # ----- Ship Art -----
     def show_ship(self):
         """Show original ship art inside a bigger box."""
         art_lines = ["", ""]
@@ -372,13 +380,11 @@ class WelcomeScreen:
         selected: int,
         message: str = "",
     ):
-        """Render mission setup with tighter, cleaner alignment."""
-        # This redraws the full setup screen every time the player changes a
-        # value, which makes the menu feel interactive.
+        """Render the compact deployment-friendly setup screen."""
         self.show_title()
         self.show_ship()
 
-        menu_indent = " " * 12
+        menu_indent = " " * max(2, (self.width - 56) // 2)
 
         setup_lines = [
             "",
@@ -390,7 +396,7 @@ class WelcomeScreen:
             self.selector_row(
                 "GRID SIZE",
                 8,
-                15,
+                10,
                 grid_text,
                 selected == 0,
             ),
@@ -401,12 +407,12 @@ class WelcomeScreen:
                 ships_text,
                 selected == 1,
             ),
+            "",
             self.action_row("DEPLOY FLEET", selected == 2),
             "",
             menu_indent
             + Fore.GREEN
-            + "Use ↑/↓ to select, ←/→ or number keys to change, "
-            + "and Enter to confirm."
+            + "Use arrows or numbers. Press Enter to confirm."
             + Style.RESET_ALL,
             "",
         ]
@@ -462,7 +468,7 @@ class WelcomeScreen:
                 # when it reaches the minimum.
                 if selected == 0:
                     current = int(grid_text) if grid_text.isdigit() else 8
-                    current = 15 if current <= 8 else current - 1
+                    current = 10 if current <= 8 else current - 1
                     grid_text = str(current)
                 elif selected == 1:
                     current = int(ships_text) if ships_text.isdigit() else 3
@@ -475,7 +481,7 @@ class WelcomeScreen:
                 # when it reaches the maximum.
                 if selected == 0:
                     current = int(grid_text) if grid_text.isdigit() else 8
-                    current = 8 if current >= 15 else current + 1
+                    current = 8 if current >= 10 else current + 1
                     grid_text = str(current)
                 elif selected == 1:
                     current = int(ships_text) if ships_text.isdigit() else 3
@@ -487,10 +493,10 @@ class WelcomeScreen:
                 # Enter either moves to the next field or starts the game,
                 # but only after validating the current values.
                 if selected == 0:
-                    if grid_text.isdigit() and 8 <= int(grid_text) <= 15:
+                    if grid_text.isdigit() and 8 <= int(grid_text) <= 10:
                         selected = 1
                     else:
-                        message = "GRID SIZE must be between 8 and 15."
+                        message = "GRID SIZE must be between 8 and 10."
                     continue
 
                 if selected == 1:
@@ -501,8 +507,8 @@ class WelcomeScreen:
                     continue
 
                 if selected == 2:
-                    if not (grid_text.isdigit() and 8 <= int(grid_text) <= 15):
-                        message = "GRID SIZE must be between 8 and 15."
+                    if not (grid_text.isdigit() and 8 <= int(grid_text) <= 10):
+                        message = "GRID SIZE must be between 8 and 10."
                         selected = 0
                         continue
 
@@ -536,81 +542,41 @@ class WelcomeScreen:
 
     # ----- Mission Briefing -----
     def mission_briefing(self, size, ships):
-        """Show tighter premium-style mission briefing."""
-        # Convert the final row number into a letter, for example 8 -> H.
+        """Show a shorter compact mission briefing."""
         max_row = chr(64 + size)
 
-        left_lines = [
+        briefing_lines = [
             "",
-            "  " + Fore.CYAN + "Welcome, Commander." + Style.RESET_ALL,
-            "  Enemy fleets lurk beyond the horizon.",
+            "  " + Fore.CYAN + Style.BRIGHT + "Welcome, Commander." + Style.RESET_ALL,
             f"  Tactical grid: {size}x{size} sectors (A-{max_row}, 1-{size})",
             f"  Fleet deployed: {ships} battleships",
-            "  Enemy ships are hidden.",
-            "  Hunt them down with precision fire.",
-            "",
-        ]
-
-        right_lines = [
-            "",
-            (
-                "  "
-                + Fore.MAGENTA
-                + Style.BRIGHT
-                + "TACTICAL ORDERS"
-                + Style.RESET_ALL
-            ),
-            "  - Enter strike coordinates like A1, C7, or H8",
-            f"  - {HIT}  Direct hit on enemy ship",
-            f"  - {MISS}  Splash! Shot missed",
-            f"  - {WATER}  Untouched waters",
-            f"  - {SHIP_CHAR}  Your ship positions (your radar only)",
-            "",
-            (
-                "  "
-                + Fore.YELLOW
-                + Style.BRIGHT
-                + "RULES OF ENGAGEMENT"
-                + Style.RESET_ALL
-            ),
-            "  - Turns alternate - one strike per side.",
-            "  - Victory: Destroy the enemy fleet.",
-            "  - Defeat: All your ships are sunk.",
+            "  Controls: Enter strike coordinates like A1 or H8.",
+            f"  Marks: {HIT}=Hit  {MISS}=Miss  {WATER}=Water  {SHIP_CHAR}=Your Fleet",
+            "  Rules: One strike per turn. Destroy the enemy fleet.",
             "",
         ]
 
         clear_screen()
         self.show_title()
-        self.show_ship()
 
-        # Show the story/instructions in two panels so the screen feels like
-        # a game briefing instead of plain text.
-        self.print_side_by_side_panels(
+        self.print_custom_panel(
             "MISSION BRIEFING",
-            left_lines,
-            "TACTICAL CONSOLE",
-            right_lines,
+            briefing_lines,
+            panel_width=min(76, self.width - 4),
+            align="left",
         )
 
         print()
 
         deploy_lines = [
-            (
-                "Stay sharp, Commander. The fate of the fleet "
-                "rests in your hands."
-            ),
+            "Fleet standing by.",
             "",
-            (
-                Fore.GREEN
-                + Style.BRIGHT
-                + "Press Enter to deploy your fleet..."
-                + Style.RESET_ALL
-            ),
+            Fore.GREEN + Style.BRIGHT + "Press Enter to deploy your fleet..." + Style.RESET_ALL,
         ]
         self.print_custom_panel(
             "DEPLOYMENT",
             deploy_lines,
-            panel_width=76,
+            panel_width=min(68, self.width - 4),
             align="center",
         )
 
@@ -629,10 +595,20 @@ SHIP_CHAR = "🚢"
 # Layout constants keep the terminal UI consistent in one place.
 LEFT_TITLE = "Enemy Fleet"
 RIGHT_TITLE = "Your Fleet"
-CELL_VISUAL = 3
-GAP_BETWEEN_BOARDS = " " * 8
-GAME_UI_WIDTH = 118
-STATUS_UI_WIDTH = 96
+
+
+def get_terminal_width() -> int:
+    """Return a safe terminal width for local and deployed play."""
+    cols = shutil.get_terminal_size(fallback=(80, 24)).columns
+    return max(68, min(80, cols - 2))
+
+
+GAME_UI_WIDTH = get_terminal_width()
+STATUS_UI_WIDTH = max(56, GAME_UI_WIDTH - 8)
+
+# Use a slightly tighter cell width on very small terminals.
+CELL_VISUAL = 2 if GAME_UI_WIDTH < 74 else 3
+GAP_BETWEEN_BOARDS = " " * 2
 
 
 def clear_screen():
@@ -679,6 +655,7 @@ def build_board_block(
     # row letters like a classic Battleship display.
     size = len(grid_rows)
     inner_width = 3 + (size * CELL_VISUAL)
+    inner_width = min(inner_width, GAME_UI_WIDTH - 6)
     lines = []
 
     label = f" {title_text} "
@@ -705,15 +682,26 @@ def build_board_block(
 
 
 def display_boards(enemy_view: list[list[str]], player_board: list[list[str]]):
-    """Print enemy + player boards side-by-side centered correctly."""
-    # The enemy board only shows what the player has discovered so far,
-    # while the player board shows their actual ship positions too.
-    left_block = build_board_block(LEFT_TITLE, enemy_view)
-    right_block = build_board_block(RIGHT_TITLE, player_board)
+    """Print boards side by side when they fit, else stack them."""
+    enemy_block = build_board_block(LEFT_TITLE, enemy_view)
+    player_block = build_board_block(RIGHT_TITLE, player_board)
 
-    for left_row, right_row in zip(left_block, right_block):
-        combined = left_row + GAP_BETWEEN_BOARDS + right_row
-        print(center_visual(combined, GAME_UI_WIDTH))
+    board_width = max(wcswidth(strip_ansi(row)) for row in enemy_block)
+    gap = " " * 4
+    combined_width = (board_width * 2) + len(gap)
+
+    if combined_width <= GAME_UI_WIDTH:
+        for enemy_row, player_row in zip(enemy_block, player_block):
+            print(center_visual(enemy_row + gap + player_row, GAME_UI_WIDTH))
+        return
+
+    for row in enemy_block:
+        print(center_visual(row, GAME_UI_WIDTH))
+
+    print()
+
+    for row in player_block:
+        print(center_visual(row, GAME_UI_WIDTH))
 
 
 class BattleshipGame:
@@ -1061,107 +1049,50 @@ class BattleshipGame:
         return f"💦 Enemy fires at {pos} - Torpedo missed, you evaded!"
 
     def _show_status(self, current_turn="Player"):
-        """Show a three-section arcade status console under the boards."""
+        """Show a compact framed status panel below the boards."""
         enemy_left = len(self.enemy_ships)
         player_left = len(self.player_ships)
 
-        # Show remaining ships as repeated ship icons for a quick visual read.
-        player_bar = (
-            " ".join([SHIP_CHAR] * player_left) if player_left else "-"
-        )
-        enemy_bar = " ".join([SHIP_CHAR] * enemy_left) if enemy_left else "-"
-
         if current_turn == "Player":
-            turn_value = (
-                Fore.CYAN
-                + Style.BRIGHT
-                + "PLAYER TURN"
-                + Style.RESET_ALL
-            )
+            turn_value = Fore.CYAN + Style.BRIGHT + "PLAYER TURN" + Style.RESET_ALL
         else:
-            turn_value = (
-                Fore.MAGENTA
-                + Style.BRIGHT
-                + "ENEMY TURN"
-                + Style.RESET_ALL
-            )
+            turn_value = Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
 
-        col1 = 22
-        col2 = 40
-        col3 = 28
+        panel_width = min(STATUS_UI_WIDTH, GAME_UI_WIDTH - 4)
+        inner_width = panel_width - 2
+        h = chr(9472)
+        v = chr(9474)
+        tl = chr(9484)
+        tr = chr(9488)
+        bl = chr(9492)
+        br = chr(9496)
 
-        # Fixed column widths keep the status panel tidy and aligned.
-        line_rule = Fore.YELLOW + "─" * STATUS_UI_WIDTH + Style.RESET_ALL
+        title = " STATUS "
+        spare = max(0, inner_width - len(title))
+        left = spare // 2
+        right = spare - left
 
-        header_left = (
-            Fore.YELLOW + Style.BRIGHT + "TURN STATUS" + Style.RESET_ALL
-        )
-        header_mid = (
-            Fore.YELLOW + Style.BRIGHT + "FLEET STATUS" + Style.RESET_ALL
-        )
-        header_right = (
-            Fore.YELLOW + Style.BRIGHT + "SHOTS FIRED" + Style.RESET_ALL
-        )
+        top = Fore.YELLOW + tl + (h * left) + title + \
+            (h * right) + tr + Style.RESET_ALL
+        bottom = Fore.YELLOW + bl + (h * inner_width) + br + Style.RESET_ALL
 
-        header_line = (
-            pad_visual(header_left, col1)
-            + " | "
-            + pad_visual(header_mid, col2)
-            + " | "
-            + pad_visual(header_right, col3)
-        )
+        lines = [
+            turn_value,
+            f"Enemy Ships Left: {enemy_left}",
+            f"Your Ships Left:  {player_left}",
+            (
+                "Shots Fired - "
+                f"Player: {self.total_player_shots} | Enemy: {self.total_enemy_shots}"
+            ),
+            f"Legend: {HIT}=Hit  {MISS}=Miss  {WATER}=Water  {SHIP_CHAR}=Your Fleet",
+        ]
 
-        row1 = (
-            pad_visual(turn_value, col1)
-            + " | "
-            + pad_visual(
-                Fore.WHITE
-                + f"Enemy Ships: {enemy_left}  {enemy_bar}"
-                + Style.RESET_ALL,
-                col2,
-            )
-            + " | "
-            + pad_visual(
-                Fore.WHITE
-                + f"Player: {self.total_player_shots}"
-                + Style.RESET_ALL,
-                col3,
-            )
-        )
-
-        row2 = (
-            pad_visual("", col1)
-            + " | "
-            + pad_visual(
-                Fore.WHITE
-                + f"Your Ships:  {player_left}  {player_bar}"
-                + Style.RESET_ALL,
-                col2,
-            )
-            + " | "
-            + pad_visual(
-                Fore.WHITE
-                + f"Enemy:  {self.total_enemy_shots}"
-                + Style.RESET_ALL,
-                col3,
-            )
-        )
-
-        print("\n" + center_visual(line_rule, GAME_UI_WIDTH))
-        print(center_visual(header_line, GAME_UI_WIDTH))
-        print(center_visual(row1, GAME_UI_WIDTH))
-        print(center_visual(row2, GAME_UI_WIDTH))
-        print(center_visual(line_rule, GAME_UI_WIDTH))
-
-        legend = (
-            Fore.YELLOW
-            + "Legend: "
-            + Style.RESET_ALL
-            + f"{HIT}=Hit   {MISS}=Miss   "
-            + f"{WATER}=Water   {SHIP_CHAR}=Your Fleet"
-        )
-        print(center_visual(legend, GAME_UI_WIDTH))
-        print(center_visual(line_rule, GAME_UI_WIDTH))
+        print()
+        print(center_visual(top, GAME_UI_WIDTH))
+        for line in lines:
+            print(center_visual(Fore.YELLOW + v + Style.RESET_ALL + pad_visual(line,
+                  inner_width) + Fore.YELLOW + v + Style.RESET_ALL, GAME_UI_WIDTH))
+        print(center_visual(bottom, GAME_UI_WIDTH))
 
     def _end_screen(self):
         """Show final victory or defeat screen in arcade style."""
@@ -1211,7 +1142,7 @@ class BattleshipGame:
                 "",
             ]
 
-        panel_width = 76
+        panel_width = min(76, GAME_UI_WIDTH - 4)
         inner_width = panel_width - 2
         label = " BATTLE RESULT "
         spare = inner_width - len(label)
@@ -1238,47 +1169,35 @@ class BattleshipGame:
 
 # ========= 3) Run Game =========
 if __name__ == "__main__":
-    # Static title art and ship art used by the welcome and setup screens.
-    title_lines = [
-        ("██████   █████  ████████ ████████ ██      ███████ ███████ "
-         "██   ██ ██ ██████  ███████"),
-        ("██   ██ ██   ██    ██       ██    ██      ██      ██      "
-         "██   ██ ██ ██   ██ ██     "),
-        ("██████  ███████    ██       ██    ██      █████   ███████ "
-         "███████ ██ ██████  ███████"),
-        ("██   ██ ██   ██    ██       ██    ██      ██           ██ "
-         "██   ██ ██ ██           ██"),
-        ("██████  ██   ██    ██       ██    ███████ ███████ ███████ "
-         "██   ██ ██ ██      ███████"),
+    # Compact deployment assets sized for the Code Institute 80x24 terminal.
+    welcome_title_lines = [
+        "█████▄ ▄████▄ ██████ ██████ ██     ██████ ▄█████ ██  ██ ██ █████▄ ▄█████ ",
+        "██▄▄██ ██▄▄██   ██     ██   ██     ██▄▄   ▀▀▀▄▄▄ ██████ ██ ██▄▄█▀ ▀▀▀▄▄▄ ",
+        "██▄▄█▀ ██  ██   ██     ██   ██████ ██▄▄▄▄ █████▀ ██  ██ ██ ██     █████▀ ",
+    ]
+
+    gameplay_title_lines = [
+        "BATTLESHIPS",
     ]
 
     ship_art = r"""
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢀⣀⠂⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠦⡠⡄⢈⣣⠡⡠⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⢊⠔⠔⠄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⠀⠀⠀⠀⠀⠀⠀⠀⠠⠀⡪⡪⠣⢑⠨⠀⢖⡸⠀⠀⢀⢀⠀⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡀⢁⣀⡤⡤⣤⢤⡄⠀⠀⢸⢪⡲⡌⡢⠨⢎⢝⠬⡤⠤⡔⠦⡀⢄⠀⢠⢀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢠⡐⢴⠱⢀⡘⡵⡹⣕⡽⣹⢼⡱⡕⡝⠽⢕⣓⢯⡻⡪⠏⡚⠸⢙⠪⠯⡚⠝⠈⠡⡤⣈⡪⣣⠮⠀⠀⠀⠀⠠⡠⡀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠠⠠⠄⠤⠠⡠⡰⡀⠀⠀⢠⢦⡨⣕⢮⢗⢤⢧⢯⢬⠽⠼⠵⠳⠵⠣⠭⠮⠫⠲⠪⠃⡂⢅⢑⠨⡈⡢⠨⢂⢂⠢⠤⠠⡣⠵⠔⠤⠔⠧⠤⠤⠠⠬⠮⠮⠦⠡⠤⠤⠤⠤⠤⠠⠠⡠⡠⣠⡠⡠⣠⢠⠤⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣬⣜⣤⢤⡤⣢⢥⣢⣤⡬⣝⣞⡮⣤⢤⡥⣳⣕⣕⣧⣳⢝⣮⣺⣪⡡⣂⣌⣂⣅⢅⣅⢕⣈⢀⡀⣀⡠⣂⣅⣂⣅⣂⡢⣑⣐⢄⢅⣊⢔⣐⢬⢬⢬⢬⡢⡥⡪⡬⡲⡳⣲⡪⡮⡲⣕⢏⣏⢏⢯⡫⣺⢪⡺⣜⣝⠗⠉⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠈⢞⡾⡽⡾⣽⣺⣳⣳⢯⣟⢾⣝⣗⡯⡯⣗⡯⣞⢷⢽⢽⣺⢞⢮⢮⡣⡧⡳⣪⢳⢕⠇⡎⡢⢣⡺⣜⢕⢮⡪⡲⡵⣹⢪⢎⡗⡽⣸⢪⡺⣪⢳⣹⣪⢮⡳⣝⢮⢯⢞⡮⣞⢮⡳⣳⢳⢕⢏⢧⡫⡮⡳⡹⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠂⠠⠠⠛⠛⠛⢋⠓⠛⡋⢛⠚⠛⢓⠛⢛⠛⢛⠛⢛⠛⡛⢛⠛⡛⢛⠫⢛⠛⡛⢛⠛⡛⡛⢛⢛⢛⠛⢝⢛⢛⢛⢛⢛⢛⢛⢛⢛⠛⡛⢛⠛⡛⢛⠝⡚⡛⢛⠛⡛⢛⠫⠛⠝⠫⠛⠝⠛⠛⢛⠙⠫⠛⡑⢐⠐⡐⠄⠂⠔⠀⠂⠐⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠐⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+         ⠀⠠⡇⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⡀⢰⣷⣶⣶⡄⢠⣤⠀⠀⠀⠀⠀
+⠠⠤⠦⠤⠤⠦⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠋⠀
 """
 
     # Run the setup screens first so the player can choose the board size
     # and number of ships before the actual battle starts.
-    ws = WelcomeScreen(title_lines, ship_art, width=100)
+    ws = WelcomeScreen(welcome_title_lines, ship_art, width=GAME_UI_WIDTH)
     ws.show_title()
     ws.show_ship()
     size, ships = ws.get_inputs()
     ws.mission_briefing(size, ships)
 
     # Create the game object with the chosen settings, then begin the match.
-    game = BattleshipGame(size=size, num_ships=ships, title_lines=title_lines)
+    game = BattleshipGame(
+        size=size,
+        num_ships=ships,
+        title_lines=gameplay_title_lines,
+    )
     game.play()
-# Your code goes here.
-# You can delete these comments, but do not change the name of this file
-# Write your code to expect a terminal of 80 characters wide and 24 rows high
