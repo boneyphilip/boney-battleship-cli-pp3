@@ -835,23 +835,11 @@ class BattleshipGame:
         self.battle_message = ""
 
     def _flash_warning(self, message: str, current_turn="Enemy"):
-        """Blink a warning message with a slower dramatic pace."""
+        """Show a steady warning message without blinking the full screen."""
         warning_text = Fore.RED + Style.BRIGHT + message + Style.RESET_ALL
-
-        for _ in range(2):
-            # Alternate between showing and hiding the warning to create a
-            # simple blinking effect.
-            self.battle_message = warning_text
-            self._render_game_frame(current_turn=current_turn, prompt=False)
-            time.sleep(0.28)
-
-            self.battle_message = ""
-            self._render_game_frame(current_turn=current_turn, prompt=False)
-            time.sleep(0.14)
-
         self.battle_message = warning_text
         self._render_game_frame(current_turn=current_turn, prompt=False)
-        time.sleep(0.80)
+        time.sleep(0.60)
         self.battle_message = ""
 
     def play(self):
@@ -912,17 +900,9 @@ class BattleshipGame:
                 continue
 
             self._show_battle_message(
-                Fore.YELLOW
-                + f"🔻 Launching torpedo at {self.last_player_target}..."
-                + Style.RESET_ALL,
-                current_turn="Player",
-                delay=0.70,
-            )
-
-            self._show_battle_message(
                 Fore.CYAN + self.player_msg + Style.RESET_ALL,
                 current_turn="Player",
-                delay=1.25,
+                delay=0.85,
             )
 
             if not self.enemy_ships:
@@ -939,7 +919,7 @@ class BattleshipGame:
             self._show_battle_message(
                 Fore.MAGENTA + self.enemy_msg + Style.RESET_ALL,
                 current_turn="Enemy",
-                delay=1.25,
+                delay=0.85,
             )
 
         self._end_screen()
