@@ -367,7 +367,12 @@ class WelcomeScreen:
             + Style.RESET_ALL,
         ]
 
-        self.print_panel("MISSION SETUP", setup_lines, align="left")
+        self.print_custom_panel(
+            "MISSION SETUP",
+            setup_lines,
+            panel_width=min(68, self.width - 2),
+            align="left",
+        )
 
         if message:
             print(
@@ -509,7 +514,7 @@ class WelcomeScreen:
         self.print_custom_panel(
             "MISSION BRIEFING",
             briefing_lines,
-            panel_width=min(72, self.width - 4),
+            panel_width=min(66, self.width - 4),
             align="left",
         )
 
@@ -544,12 +549,21 @@ def get_terminal_width() -> int:
     return max(68, min(80, cols - 2))
 
 
-GAME_UI_WIDTH = get_terminal_width()
-STATUS_UI_WIDTH = max(56, GAME_UI_WIDTH - 8)
+# Detect whether the game is running on Heroku deployment.
+IS_HEROKU = bool(os.environ.get("DYNO"))
 
-# Use a readable cell width while keeping two 10x10 boards side by side.
-CELL_VISUAL = 3
-GAP_BETWEEN_BOARDS = " " * 2
+DEPLOYMENT_SAFE_WIDTH = 72
+
+if IS_HEROKU:
+    GAME_UI_WIDTH = min(DEPLOYMENT_SAFE_WIDTH, get_terminal_width())
+    STATUS_UI_WIDTH = max(56, min(64, GAME_UI_WIDTH - 4))
+    CELL_VISUAL = 2
+else:
+    GAME_UI_WIDTH = get_terminal_width()
+    STATUS_UI_WIDTH = max(56, GAME_UI_WIDTH - 8)
+    CELL_VISUAL = 3
+
+GAP_BETWEEN_BOARDS = " " * 2 if IS_HEROKU else " " * 3
 
 
 def clear_screen():
@@ -1014,7 +1028,11 @@ class BattleshipGame:
                 Fore.MAGENTA + Style.BRIGHT + "ENEMY TURN" + Style.RESET_ALL
             )
 
-        panel_width = min(72, GAME_UI_WIDTH - 2)
+        panel_width = (
+            min(64, GAME_UI_WIDTH - 2)
+            if IS_HEROKU
+            else min(72, GAME_UI_WIDTH - 2)
+        )
         inner_width = panel_width - 2
         side_pad = 2
         content_width = inner_width - (side_pad * 2)
@@ -1209,6 +1227,9 @@ if __name__ == "__main__":
 
     if GAME_UI_WIDTH < 76:
         welcome_title_lines = ["<< BATTLESHIPS >>"]
+
+    # Always use the compact title in deployment-facing terminals.
+    welcome_title_lines = ["<< BATTLESHIPS >>"]
 
     gameplay_title_lines = [
         Fore.CYAN + Style.BRIGHT + "<< BATTLESHIPS >>" + Style.RESET_ALL,
