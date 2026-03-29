@@ -1,32 +1,18 @@
 <div align="center">
 
 <pre>
-██████   █████  ████████ ████████ ██      ███████ ███████ ██   ██ ██ ██████  ███████
-██   ██ ██   ██    ██       ██    ██      ██      ██      ██   ██ ██ ██   ██ ██
-██████  ███████    ██       ██    ██      █████   ███████ ███████ ██ ██████  ███████
-██   ██ ██   ██    ██       ██    ██      ██           ██ ██   ██ ██ ██           ██
-██████  ██   ██    ██       ██    ███████ ███████ ███████ ██   ██ ██ ██      ███████
+██████   █████  ████████ ████████ ██      ███████ ███████ ██   ██ ██ ██████  ███████ 
+██   ██ ██   ██    ██       ██    ██      ██      ██      ██   ██ ██ ██   ██ ██      
+██████  ███████    ██       ██    ██      █████   ███████ ███████ ██ ██████  ███████ 
+██   ██ ██   ██    ██       ██    ██      ██           ██ ██   ██ ██ ██           ██ 
+██████  ██   ██    ██       ██    ███████ ███████ ███████ ██   ██ ██ ██      ███████ 
 </pre>
 
-### Command the Seas. Hunt the enemy. Sink the fleet.
+<h3>Command the Seas. Hunt the Enemy. Sink the Fleet.</h3>
+
+<p><strong>Battleships Game – Python Terminal Edition</strong></p>
 
 <p><em>A Python terminal battleship experience built for tactical play, clean UI, and arcade-style feedback.</em></p>
-
-<pre>
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢀⣀⠂⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠦⡠⡄⢈⣣⠡⡠⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⢊⠔⠔⠄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⠀⠀⠀⠀⠀⠀⠀⠀⠠⠀⡪⡪⠣⢑⠨⠀⢖⡸⠀⠀⢀⢀⠀⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡀⢁⣀⡤⡤⣤⢤⡄⠀⠀⢸⢪⡲⡌⡢⠨⢎⢝⠬⡤⠤⡔⠦⡀⢄⠀⢠⢀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢠⡐⢴⠱⢀⡘⡵⡹⣕⡽⣹⢼⡱⡕⡝⠽⢕⣓⢯⡻⡪⠏⡚⠸⢙⠪⠯⡚⠝⠈⠡⡤⣈⡪⣣⠮⠀⠀⠀⠀⠠⡠⡀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠠⠠⠄⠤⠠⡠⡰⡀⠀⠀⢠⢦⡨⣕⢮⢗⢤⢧⢯⢬⠽⠼⠵⠳⠵⠣⠭⠮⠫⠲⠪⠃⡂⢅⢑⠨⡈⡢⠨⢂⢂⠢⠤⠠⡣⠵⠔⠤⠔⠧⠤⠤⠠⠬⠮⠮⠦⠡⠤⠤⠤⠤⠤⠠⠠⡠⡠⣠⡠⡠⣠⢠⠤⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣬⣜⣤⢤⡤⣢⢥⣢⣤⡬⣝⣞⡮⣤⢤⡥⣳⣕⣕⣧⣳⢝⣮⣺⣪⡡⣂⣌⣂⣅⢅⣅⢕⣈⢀⡀⣀⡠⣂⣅⣂⣅⣂⡢⣑⣐⢄⢅⣊⢔⣐⢬⢬⢬⢬⡢⡥⡪⡬⡲⡳⣲⡪⡮⡲⣕⢏⣏⢏⢯⡫⣺⢪⡺⣜⣝⠗⠉⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠈⢞⡾⡽⡾⣽⣺⣳⣳⢯⣟⢾⣝⣗⡯⡯⣗⡯⣞⢷⢽⢽⣺⢞⢮⢮⡣⡧⡳⣪⢳⢕⠇⡎⡢⢣⡺⣜⢕⢮⡪⡲⡵⣹⢪⢎⡗⡽⣸⢪⡺⣪⢳⣹⣪⢮⡳⣝⢮⢯⢞⡮⣞⢮⡳⣳⢳⢕⢏⢧⡫⡮⡳⡹⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠂⠠⠠⠛⠛⠛⢋⠓⠛⡋⢛⠚⠛⢓⠛⢛⠛⢛⠛⢛⠛⡛⢛⠛⡛⢛⠫⢛⠛⡛⢛⠛⡛⡛⢛⢛⢛⠛⢝⢛⢛⢛⢛⢛⢛⢛⢛⢛⠛⡛⢛⠛⡛⢛⠝⡚⡛⢛⠛⡛⢛⠫⠛⠝⠫⠛⠝⠛⠛⢛⠙⠫⠛⡑⢐⠐⡐⠄⠂⠔⠀⠂⠐⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠐⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-</pre>
 
 </div>
 
@@ -83,24 +69,24 @@ This project was designed as a complete command-line game experience rather than
 
 The project takes the familiar Battleships concept and presents it through a structured multi-screen player journey:
 
-- a welcome screen that introduces the game
-- a mission setup screen where the user selects the battlefield size and fleet size
-- a mission briefing screen that explains the rules and symbols
-- a live gameplay screen with two tactical boards shown side by side
-- a status section that continuously reports turn information, ships remaining, and shot counts
-- turn-by-turn feedback after each player and enemy action
-- dedicated end-game result screens for mission success and mission failure
+- A welcome screen that introduces the game
+- A mission setup screen where the user selects the battlefield size and fleet size
+- A mission briefing screen that explains the rules and symbols
+- A live gameplay screen with two tactical boards shown side by side
+- A status section that continuously reports turn information, ships remaining, and shot counts
+- Turn-by-turn feedback after each player and enemy action
+- Dedicated end-game result screens for mission success and mission failure
 
 The game was intentionally built around readability and usability. Because terminal-based applications can easily become confusing or visually cluttered, special care was taken to structure each screen in a way that feels organised, easy to scan, and beginner-friendly. Important information is grouped into framed sections, feedback is shown clearly after every action, and controls are explained in plain language.
 
 A major design goal of the project was to ensure that the gameplay experience still feels dynamic even within the limitations of a terminal interface. For this reason, the game includes:
 
-- stylised title presentation
-- framed tactical boards
-- colour-coded feedback messages
-- a clearly separated status panel
-- sequential turn pacing
-- dedicated mission result screens
+- Stylised title presentation
+- Framed tactical boards
+- Colour-coded feedback messages
+- A clearly separated status panel
+- Sequential turn pacing
+- Dedicated mission result screens
 
 The project also focuses on controlled scope. Instead of trying to simulate the full traditional Battleships ruleset with complex multi-cell ship placement and advanced AI, the game concentrates on delivering a clean, stable, and enjoyable battle loop with strong presentation and reliable input handling. This makes the experience easier to understand while still offering strategy, suspense, and replayability.
 
@@ -466,7 +452,7 @@ This screen improves first impressions and gives the project a stronger identity
 
 ### Screenshot
 
-![Welcome Screen](docs/images/mission-setup-screen.png)
+No dedicated welcome screen screenshot was captured separately, as the opening presentation transitions directly into the mission setup flow in the deployed terminal experience.
 
 ## Mission Setup Screen
 
@@ -743,24 +729,24 @@ The logic is intentionally simple, which suits the scope of the project and keep
 
 ## Hidden Developer Testing Tools
 
-During development, hidden testing tools were added to speed up screenshot capture and special-state testing.
+During development, hidden testing tools were included to speed up screenshot capture and special-state testing.
 
 These tools are intentionally disabled in normal gameplay.
 
 ### Why They Are Disabled
 
-Developer commands are turned off in the final version because:
+They are kept off in the final version because:
 
 - normal players should not accidentally activate cheats
-- the deployed assessment version should represent real gameplay
-- testing shortcuts should not affect the fairness of the game
-- the final user experience should remain clean and consistent
+- the deployed game should reflect real gameplay
+- testing shortcuts should not affect fairness
+- the assessment version should remain clean and reliable
 
 ### How to Enable Developer Mode
 
 Open `run.py`.
 
-Find this line inside the `BattleshipGame.__init__()` method:
+Inside the `BattleshipGame.__init__()` method, find this line:
 
 ```python
 self.dev_mode = False
@@ -772,27 +758,20 @@ Replace it with:
 self.dev_mode = True
 ```
 
-Save the file and run the game again.
-
 ### Where to Type the Cheat Codes
 
-After developer mode is enabled, launch the game normally and continue until you reach the main **gameplay screen**.
+Cheat codes must be typed in the normal gameplay target input area.
 
-Type the cheat code in the same place where you would normally enter a target coordinate such as:
-
-- `A1`
-- `B7`
-- `H8`
-
-In other words, enter the cheat code in the **target input prompt** shown during battle.
-
-Example prompt:
+This is the same input prompt where the player would normally enter a coordinate such as:
 
 ```text
-Enter target (example: A1). Type Q to quit:
+A1
+B7
+H8
+J10
 ```
 
-Instead of entering a normal coordinate, type one of the developer commands below and press **Enter**.
+When the gameplay screen is visible and the game asks for a target, type the cheat code there instead of a coordinate, then press Enter.
 
 ### Available Developer Commands
 
@@ -801,97 +780,81 @@ Instead of entering a normal coordinate, type one of the developer commands belo
 Forces an instant player victory.
 
 **Where to use it:**  
-Type `/WIN` into the gameplay target input prompt and press **Enter**.
+Type `/WIN` in the gameplay target input prompt and press **Enter**.
 
-**What happens:**  
+What it does:
 
-- all enemy ships are removed immediately
-- the game ends with the **Mission Accomplished** screen
+- clears all remaining enemy ships
+- ends the battle immediately
+- shows the Mission Accomplished result screen
 
-**Best used for:**  
+Best use case:
 
-- capturing the victory screenshot
-- testing the final success state
-- checking the success result panel
-
----
+- capture the victory screenshot
+- test the final success screen
+- confirm win-state flow
 
 #### `/LOSE`
 
 Forces an instant player defeat.
 
 **Where to use it:**  
-Type `/LOSE` into the gameplay target input prompt and press **Enter**.
+Type `/LOSE` in the gameplay target input prompt and press **Enter**.
 
-**What happens:**  
+What it does:
 
-- all player ships are removed immediately
-- the game ends with the **Mission Failed** screen
+- clears all player ships
+- ends the battle immediately
+- shows the Mission Failed result screen
 
-**Best used for:**  
+Best use case:
 
-- capturing the defeat screenshot
-- testing the final failure state
-- checking the failure result panel
-
----
+- capture the defeat screenshot
+- test the final failure screen
+- confirm loss-state flow
 
 #### `/PHIT`
 
 Forces a successful player hit on one remaining enemy ship.
 
 **Where to use it:**  
-Type `/PHIT` into the gameplay target input prompt and press **Enter**.
+Type `/PHIT` in the gameplay target input prompt and press **Enter**.
 
-**What happens:**  
+What it does:
 
-- one enemy ship is destroyed
-- the enemy board updates with a hit marker
-- the player shot count increases
-- a hit feedback message is shown
+- removes one enemy ship
+- updates the enemy board with a hit marker
+- increases the player shot count
+- shows hit feedback
 
-**Best used for:**  
+Best use case:
 
-- testing player hit feedback
-- capturing action screenshots
-- checking near-win battle states
-
----
+- test hit feedback messages
+- capture gameplay screenshots with visible enemy hits
+- create near-win scenarios
 
 #### `/EHIT`
 
 Forces a successful enemy hit on one remaining player ship.
 
 **Where to use it:**  
-Type `/EHIT` into the gameplay target input prompt and press **Enter**.
+Type `/EHIT` in the gameplay target input prompt and press **Enter**.
 
-**What happens:**  
+What it does:
 
-- one player ship is destroyed
-- the player board updates with a hit marker
-- the enemy attack effect is simulated
+- removes one player ship
+- updates the player board with a hit marker
+- shows enemy-hit feedback
 
-**Best used for:**  
+Best use case:
 
-- testing enemy impact feedback
-- capturing damage-state screenshots
-- checking near-loss battle states
-
-### Example Testing Flow
-
-A typical screenshot testing flow could be:
-
-1. Enable developer mode in `run.py`
-2. Start the game normally
-3. Reach the gameplay screen
-4. Type one of the cheat codes into the target prompt
-5. Press **Enter**
-6. Capture the required screenshot
-7. Disable developer mode again before final submission
+- test enemy impact on the player board
+- capture near-loss gameplay states
+- verify player fleet update behaviour
 
 ### Important Reminder
 
-After testing is finished, developer mode should be turned off again.
+After testing is complete, developer mode should be turned off again.
 
 Restore this line in `run.py`:
 
@@ -899,7 +862,7 @@ Restore this line in `run.py`:
 self.dev_mode = False
 ```
 
-This ensures that the submitted and deployed version remains fair, clean, and assessment-safe.
+This ensures that the final deployed version remains fair and assessment-safe.
 
 ## Future Features
 
